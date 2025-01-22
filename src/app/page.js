@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { Toaster } from "@/components/ui/toaster";
 import {
   collection,
   addDoc,
@@ -8,6 +9,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -16,6 +18,8 @@ export default function Home() {
   const [inputUsername, setInputUsername] = useState("");
   const [publicIp, setPublicIp] = useState("");
   const chatEndRef = useRef(null);
+  const lastSentRef = useRef(0);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Create a query that orders the messages by timestamp in ascending order
@@ -34,7 +38,7 @@ export default function Home() {
     return () => unsubscribe();
   }, []); // Empty dependency array to run only once
 
-  // Grab user's public IP to combat impersonation
+  // Grab user's public IP to combat impersonation (band-aid fix)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -51,6 +55,32 @@ export default function Home() {
 
   const sendMessage = async (e) => {
     e.preventDefault();
+
+    let performance = window.performance;
+    let previousTime = lastSentRef.current;
+    let currentTime = performance.now();
+    let elapsedTime = 999999999;
+
+    console.log("CURRENT: " + currentTime);
+    console.log("LAST: " + lastSentRef.current);
+
+    if (lastSentRef.current == 0) {
+      // If a message hasn't been sent yet, elapsed time is 0
+      lastSentRef.current = performance.now();
+    } else {
+      // If a message HAS been sent, current time is now the last sent time
+      elapsedTime = currentTime - previousTime;
+      lastSentRef.current = performance.now();
+    }
+
+    if (elapsedTime < 500) {
+      toast({
+        title: "ERROR!",
+        description: "You're sending messages too quickly!",
+      });
+      return;
+    }
+
     if (newMessages.trim()) {
       await addDoc(collection(db, "messages"), {
         message: newMessages,
@@ -133,6 +163,7 @@ export default function Home() {
               </button>
             </form>
           </div>
+          <Toaster />
         </div>
       )}
     </div>
