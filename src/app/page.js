@@ -14,6 +14,7 @@ export default function Home() {
   const [newMessages, setNewMessages] = useState("");
   const [username, setUsername] = useState("");
   const [inputUsername, setInputUsername] = useState("");
+  const [publicIp, setPublicIp] = useState("");
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -33,6 +34,21 @@ export default function Home() {
     return () => unsubscribe();
   }, []); // Empty dependency array to run only once
 
+  // Grab user's public IP to combat impersonation
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("https://api.ipify.org?format=json");
+        const json = await response.json();
+        setPublicIp(json.ip);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const sendMessage = async (e) => {
     e.preventDefault();
     if (newMessages.trim()) {
@@ -40,6 +56,7 @@ export default function Home() {
         message: newMessages,
         timestamp: new Date(),
         user: username,
+        ip: publicIp,
       });
 
       setNewMessages("");
